@@ -4,16 +4,17 @@ import tensorflow as tf
 from googletrans import Translator
 import json
 import time
+import os
 
 app = Flask(__name__)
 
-# 🔥 Load model
+# Load model
 model = tf.keras.models.load_model("saved/final_model.keras")
 
-# 🔥 Translator
+# Translator
 translator = Translator()
 
-# 🔥 Load labels from JSON (instead of dataset)
+# Load labels
 with open("label_map.json") as f:
     label_map = json.load(f)
 
@@ -37,7 +38,6 @@ def predict():
 
     keypoints = np.array(data["keypoints"], dtype=np.float32)
 
-    # must match model input shape
     if keypoints.shape != (20, 225):
         return jsonify({"result": None, "english": None})
 
@@ -45,11 +45,10 @@ def predict():
 
     preds = model.predict(keypoints, verbose=0)[0]
 
-    # 🔥 pick from top 3 predictions
     top3 = np.argsort(preds)[-3:]
     class_id = int(np.random.choice(top3))
 
-    sign_text = label_map[str(class_id)]  # 🔥 important (JSON keys are strings)
+    sign_text = label_map[str(class_id)]
 
     now = time.time()
     if now - last_time < COOLDOWN:
@@ -70,5 +69,7 @@ def predict():
     })
 
 
+# 🔥 IMPORTANT PART (PORT FIX FOR RENDER)
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
