@@ -4,7 +4,6 @@ import tensorflow as tf
 from googletrans import Translator
 import json
 import time
-import os
 
 app = Flask(__name__)
 
@@ -38,6 +37,7 @@ def predict():
 
     keypoints = np.array(data["keypoints"], dtype=np.float32)
 
+    # Validate shape
     if keypoints.shape != (20, 225):
         return jsonify({"result": None, "english": None})
 
@@ -45,6 +45,7 @@ def predict():
 
     preds = model.predict(keypoints, verbose=0)[0]
 
+    # Pick from top 3 predictions (stable + slight variation)
     top3 = np.argsort(preds)[-3:]
     class_id = int(np.random.choice(top3))
 
@@ -69,7 +70,6 @@ def predict():
     })
 
 
-# 🔥 IMPORTANT PART (PORT FIX FOR RENDER)
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+# ❗ IMPORTANT:
+# DO NOT add app.run()
+# gunicorn will handle the server automatically
