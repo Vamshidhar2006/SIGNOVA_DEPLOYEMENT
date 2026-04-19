@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<title>SIGNOVA</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<style>
+body{
+margin:0;
+background:#0a0f1a;
+color:#e5e7eb;
+font-family:Segoe UI, sans-serif;
+}
+
+#landing{
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+background:#0a0f1a;
+}
+
+#landing h1{
+font-size:42px;
+letter-spacing:2px;
+color:#22d3ee;
+margin-bottom:20px;
+}
+
+.enter-btn{
+width:260px;
+padding:16px;
+font-size:16px;
+border-radius:8px;
+border:none;
+background:#22d3ee;
+color:black;
+cursor:pointer;
+}
+
+#dashboard{display:none;height:100vh;}
+
+.container{
+display:flex;
+height:100%;
+}
+
+.left{
+flex:2;
+display:flex;
+justify-content:center;
+align-items:center;
+background:#020617;
+}
+
+canvas{
+border:2px solid #22d3ee;
+border-radius:8px;
+}
+
+.right{
+flex:1;
+display:flex;
+flex-direction:column;
+justify-content:space-between;
+padding:20px;
+background:#020617;
+border-left:1px solid #1f2937;
+}
+
+.top{
+display:flex;
+flex-direction:column;
+gap:15px;
+}
+
+.lang-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}
+
+.lang-grid button{
+width:100%;
+padding:14px;
+border:none;
+border-radius:8px;
+background:#111827;
+color:white;
+cursor:pointer;
+font-size:14px;
+}
+
+.lang-grid button:hover{
+background:#22d3ee;
+color:black;
+}
+
+.voice-toggle{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:12px;
+background:#111827;
+border-radius:8px;
+}
+
+.voice-toggle button{
+padding:10px 20px;
+border:none;
+border-radius:6px;
+background:#22d3ee;
+cursor:pointer;
+}
+
+.output-box{
+padding:18px;
+background:#020617;
+border:1px solid #1f2937;
+border-radius:8px;
+margin-top:10px;
+}
+
+.output-box h4{
+margin:0 0 10px 0;
+font-weight:500;
+color:#9ca3af;
+}
+
+.output-text{
+font-size:20px;
+color:#22d3ee;
+}
+
+.bottom button{
+width:100%;
+padding:16px;
+font-size:16px;
+border:none;
+border-radius:8px;
+background:#22d3ee;
+color:black;
+cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="landing">
+<h1>SIGNOVA</h1>
+<button class="enter-btn" onclick="openDashboard()">Enter</button>
+</div>
+
+<div id="dashboard">
+<div class="container">
+
+<div class="left">
+<video id="video" style="display:none"></video>
+<canvas id="canvas"></canvas>
+</div>
+
+<div class="right">
+
+<div class="top">
+
+<div class="lang-grid">
+<button onclick="setLanguage('hi')">Hindi</button>
+<button onclick="setLanguage('te')">Telugu</button>
+<button onclick="setLanguage('kn')">Kannada</button>
+<button onclick="setLanguage('ta')">Tamil</button>
+</div>
+
+<div class="voice-toggle">
+<span>Voice Output</span>
+<button onclick="toggleVoice()" id="voiceBtn">ON</button>
+</div>
+
+<div class="output-box">
+<h4>English</h4>
+<div id="prediction" class="output-text">Waiting...</div>
+</div>
+
+<div class="output-box">
+<h4>Translation</h4>
+<div id="translation" class="output-text">---</div>
+</div>
+
+</div>
+
+<div class="bottom">
+<button onclick="startCamera()">Start Camera</button>
+</div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+
+let sequence=[]
+let selectedLanguage="en"
+let lastTime=0
+let voiceEnabled=true
+let lastPrediction=""
+
+function openDashboard(){
+document.getElementById("landing").style.display="none"
+document.getElementById("dashboard").style.display="block"
+}
+
+function setLanguage(lang){
+selectedLanguage=lang
+}
+
+function smooth(curr, prev){
+if(!prev) return curr
+
+return curr.map((p,i)=>{
+
+let dx = Math.abs(p.x - prev[i].x)
+let dy = Math.abs(p.y - prev[i].y)
+
+let alpha = (dx + dy) < 0.01 ? 0.9 : 0.6
+
+return {
+x: prev[i].x*alpha + p.x*(1-alpha),
+y: prev[i].y*alpha + p.y*(1-alpha),
+z: prev[i].z*alpha + p.z*(1-alpha)
+}
+
+})
+}
+
+function toggleVoice(){
+voiceEnabled=!voiceEnabled
+document.getElementById("voiceBtn").innerText = voiceEnabled ? "ON" : "OFF"
+}
+
+function speak(text){
+if(!voiceEnabled) return
+speechSynthesis.cancel()
+const speech = new SpeechSynthesisUtterance(text)
+speech.rate = 0.9
+window.speechSynthesis.speak(speech)
+}
+
+function extract(results){
+
+let pose=new Array(99).fill(0)
+let lh=new Array(63).fill(0)
+let rh=new Array(63).fill(0)
+
+if(results.poseLandmarks){
+for(let i=0;i<33;i++){
+pose[i*3]=results.poseLandmarks[i].x
+pose[i*3+1]=results.poseLandmarks[i].y
+pose[i*3+2]=results.poseLandmarks[i].z
+}}
+
+if(results.leftHandLandmarks){
+for(let i=0;i<21;i++){
+lh[i*3]=results.leftHandLandmarks[i].x
+lh[i*3+1]=results.leftHandLandmarks[i].y
+lh[i*3+2]=results.leftHandLandmarks[i].z
+}}
+
+if(results.rightHandLandmarks){
+for(let i=0;i<21;i++){
+rh[i*3]=results.rightHandLandmarks[i].x
+rh[i*3+1]=results.rightHandLandmarks[i].y
+rh[i*3+2]=results.rightHandLandmarks[i].z
+}}
+
+return [...pose,...lh,...rh]
+}
+
+function startCamera(){
+
+const video=document.getElementById("video")
+const canvas=document.getElementById("canvas")
+const ctx=canvas.getContext("2d")
+
+canvas.width=640
+canvas.height=480
+
+const holistic=new Holistic({
+locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${f}`
+})
+
+holistic.setOptions({
+modelComplexity:1,
+minDetectionConfidence:0.6,
+minTrackingConfidence:0.9
+})
+
+let prevLeft=null
+let prevRight=null
+
+holistic.onResults(async results=>{
+
+ctx.clearRect(0,0,canvas.width,canvas.height)
+ctx.drawImage(results.image,0,0,canvas.width,canvas.height)
+
+const line={color:"#00FF00",lineWidth:2}
+const thin={color:"#00FF00",lineWidth:1}
+
+if(results.poseLandmarks){
+drawConnectors(ctx,results.poseLandmarks,POSE_CONNECTIONS,thin)
+}
+
+if(results.leftHandLandmarks){
+let left = smooth(results.leftHandLandmarks, prevLeft)
+prevLeft = left
+drawConnectors(ctx,left,HAND_CONNECTIONS,line)
+drawLandmarks(ctx,left,{color:"#00FF00",radius:2})
+}else prevLeft=null
+
+if(results.rightHandLandmarks){
+let right = smooth(results.rightHandLandmarks, prevRight)
+prevRight = right
+drawConnectors(ctx,right,HAND_CONNECTIONS,line)
+drawLandmarks(ctx,right,{color:"#00FF00",radius:2})
+}else prevRight=null
+
+if(results.faceLandmarks){
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_FACE_OVAL,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_LEFT_EYE,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_RIGHT_EYE,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_LEFT_EYEBROW,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_RIGHT_EYEBROW,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_LIPS,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_LEFT_IRIS,thin)
+drawConnectors(ctx,results.faceLandmarks,FACEMESH_RIGHT_IRIS,thin)
+}
+
+let kp=extract(results)
+sequence.push(kp)
+if(sequence.length>30) sequence.shift()
+
+let now=Date.now()
+
+/* 🔥 UPDATED GAP → 2200ms */
+if(sequence.length>=25 && now-lastTime>2200){
+
+const res=await fetch("/predict",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+keypoints:sequence.slice(-20),
+language:selectedLanguage
+})
+})
+
+const data=await res.json()
+
+if(data.english){
+
+if(data.english === lastPrediction) return
+
+lastPrediction = data.english
+lastTime = now
+
+document.getElementById("prediction").innerText=data.english
+document.getElementById("translation").innerText=data.result
+
+speak(data.english)
+
+}
+
+}
+
+})
+
+const camera=new Camera(video,{
+onFrame:async()=>{await holistic.send({image:video})},
+width:640,
+height:480
+})
+
+camera.start()
+}
+
+</script>
+
+</body>
+</html>

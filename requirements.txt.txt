@@ -1,0 +1,5 @@
+flask
+gunicorn
+tensorflow
+numpy
+googletrans==4.0.0-rc1
