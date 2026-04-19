@@ -9,144 +9,21 @@
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
 
 <style>
-body{
-margin:0;
-background:#0a0f1a;
-color:#e5e7eb;
-font-family:Segoe UI, sans-serif;
-}
-
-#landing{
-height:100vh;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-background:#0a0f1a;
-}
-
-#landing h1{
-font-size:42px;
-letter-spacing:2px;
-color:#22d3ee;
-margin-bottom:20px;
-}
-
-.enter-btn{
-width:260px;
-padding:16px;
-font-size:16px;
-border-radius:8px;
-border:none;
-background:#22d3ee;
-color:black;
-cursor:pointer;
-}
-
+body{margin:0;background:#0a0f1a;color:#e5e7eb;font-family:Segoe UI,sans-serif;}
+#landing{height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+#landing h1{font-size:42px;color:#22d3ee;margin-bottom:20px;}
+.enter-btn{width:260px;padding:16px;border:none;background:#22d3ee;color:black;cursor:pointer;}
 #dashboard{display:none;height:100vh;}
-
-.container{
-display:flex;
-height:100%;
-}
-
-.left{
-flex:2;
-display:flex;
-justify-content:center;
-align-items:center;
-background:#020617;
-}
-
-canvas{
-border:2px solid #22d3ee;
-border-radius:8px;
-}
-
-.right{
-flex:1;
-display:flex;
-flex-direction:column;
-justify-content:space-between;
-padding:20px;
-background:#020617;
-border-left:1px solid #1f2937;
-}
-
-.top{
-display:flex;
-flex-direction:column;
-gap:15px;
-}
-
-.lang-grid{
-display:grid;
-grid-template-columns:1fr 1fr;
-gap:10px;
-}
-
-.lang-grid button{
-width:100%;
-padding:14px;
-border:none;
-border-radius:8px;
-background:#111827;
-color:white;
-cursor:pointer;
-font-size:14px;
-}
-
-.lang-grid button:hover{
-background:#22d3ee;
-color:black;
-}
-
-.voice-toggle{
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:12px;
-background:#111827;
-border-radius:8px;
-}
-
-.voice-toggle button{
-padding:10px 20px;
-border:none;
-border-radius:6px;
-background:#22d3ee;
-cursor:pointer;
-}
-
-.output-box{
-padding:18px;
-background:#020617;
-border:1px solid #1f2937;
-border-radius:8px;
-margin-top:10px;
-}
-
-.output-box h4{
-margin:0 0 10px 0;
-font-weight:500;
-color:#9ca3af;
-}
-
-.output-text{
-font-size:20px;
-color:#22d3ee;
-}
-
-.bottom button{
-width:100%;
-padding:16px;
-font-size:16px;
-border:none;
-border-radius:8px;
-background:#22d3ee;
-color:black;
-cursor:pointer;
-}
+.container{display:flex;height:100%;}
+.left{flex:2;display:flex;justify-content:center;align-items:center;background:#020617;}
+canvas{border:2px solid #22d3ee;border-radius:8px;}
+.right{flex:1;display:flex;flex-direction:column;justify-content:space-between;padding:20px;background:#020617;}
+.lang-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.lang-grid button{padding:14px;border:none;background:#111827;color:white;cursor:pointer;}
+.voice-toggle{display:flex;justify-content:space-between;padding:12px;background:#111827;}
+.output-box{padding:18px;border:1px solid #1f2937;margin-top:10px;}
+.output-text{font-size:20px;color:#22d3ee;}
+.bottom button{width:100%;padding:16px;background:#22d3ee;color:black;cursor:pointer;}
 </style>
 </head>
 
@@ -166,8 +43,6 @@ cursor:pointer;
 </div>
 
 <div class="right">
-
-<div class="top">
 
 <div class="lang-grid">
 <button onclick="setLanguage('hi')">Hindi</button>
@@ -191,14 +66,11 @@ cursor:pointer;
 <div id="translation" class="output-text">---</div>
 </div>
 
-</div>
-
 <div class="bottom">
 <button onclick="startCamera()">Start Camera</button>
 </div>
 
 </div>
-
 </div>
 </div>
 
@@ -215,28 +87,7 @@ document.getElementById("landing").style.display="none"
 document.getElementById("dashboard").style.display="block"
 }
 
-function setLanguage(lang){
-selectedLanguage=lang
-}
-
-function smooth(curr, prev){
-if(!prev) return curr
-
-return curr.map((p,i)=>{
-
-let dx = Math.abs(p.x - prev[i].x)
-let dy = Math.abs(p.y - prev[i].y)
-
-let alpha = (dx + dy) < 0.01 ? 0.9 : 0.6
-
-return {
-x: prev[i].x*alpha + p.x*(1-alpha),
-y: prev[i].y*alpha + p.y*(1-alpha),
-z: prev[i].z*alpha + p.z*(1-alpha)
-}
-
-})
-}
+function setLanguage(lang){selectedLanguage=lang}
 
 function toggleVoice(){
 voiceEnabled=!voiceEnabled
@@ -246,39 +97,35 @@ document.getElementById("voiceBtn").innerText = voiceEnabled ? "ON" : "OFF"
 function speak(text){
 if(!voiceEnabled) return
 speechSynthesis.cancel()
-const speech = new SpeechSynthesisUtterance(text)
-speech.rate = 0.9
-window.speechSynthesis.speak(speech)
+let speech=new SpeechSynthesisUtterance(text)
+speech.rate=0.9
+speechSynthesis.speak(speech)
 }
 
-function extract(results){
-
-let pose=new Array(99).fill(0)
+function extract(r){
+let p=new Array(99).fill(0)
 let lh=new Array(63).fill(0)
 let rh=new Array(63).fill(0)
 
-if(results.poseLandmarks){
+if(r.poseLandmarks){
 for(let i=0;i<33;i++){
-pose[i*3]=results.poseLandmarks[i].x
-pose[i*3+1]=results.poseLandmarks[i].y
-pose[i*3+2]=results.poseLandmarks[i].z
-}}
+p[i*3]=r.poseLandmarks[i].x
+p[i*3+1]=r.poseLandmarks[i].y
+p[i*3+2]=r.poseLandmarks[i].z}}
 
-if(results.leftHandLandmarks){
+if(r.leftHandLandmarks){
 for(let i=0;i<21;i++){
-lh[i*3]=results.leftHandLandmarks[i].x
-lh[i*3+1]=results.leftHandLandmarks[i].y
-lh[i*3+2]=results.leftHandLandmarks[i].z
-}}
+lh[i*3]=r.leftHandLandmarks[i].x
+lh[i*3+1]=r.leftHandLandmarks[i].y
+lh[i*3+2]=r.leftHandLandmarks[i].z}}
 
-if(results.rightHandLandmarks){
+if(r.rightHandLandmarks){
 for(let i=0;i<21;i++){
-rh[i*3]=results.rightHandLandmarks[i].x
-rh[i*3+1]=results.rightHandLandmarks[i].y
-rh[i*3+2]=results.rightHandLandmarks[i].z
-}}
+rh[i*3]=r.rightHandLandmarks[i].x
+rh[i*3+1]=r.rightHandLandmarks[i].y
+rh[i*3+2]=r.rightHandLandmarks[i].z}}
 
-return [...pose,...lh,...rh]
+return [...p,...lh,...rh]
 }
 
 function startCamera(){
@@ -287,66 +134,33 @@ const video=document.getElementById("video")
 const canvas=document.getElementById("canvas")
 const ctx=canvas.getContext("2d")
 
-canvas.width=640
-canvas.height=480
+/* 🔥 LOWER RESOLUTION */
+canvas.width=320
+canvas.height=240
 
 const holistic=new Holistic({
 locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/holistic/${f}`
 })
 
+/* 🔥 LIGHTER MODEL */
 holistic.setOptions({
-modelComplexity:1,
+modelComplexity:0,
 minDetectionConfidence:0.6,
-minTrackingConfidence:0.9
+minTrackingConfidence:0.7
 })
 
-let prevLeft=null
-let prevRight=null
-
-holistic.onResults(async results=>{
+holistic.onResults(async r=>{
 
 ctx.clearRect(0,0,canvas.width,canvas.height)
-ctx.drawImage(results.image,0,0,canvas.width,canvas.height)
+ctx.drawImage(r.image,0,0,canvas.width,canvas.height)
 
-const line={color:"#00FF00",lineWidth:2}
-const thin={color:"#00FF00",lineWidth:1}
-
-if(results.poseLandmarks){
-drawConnectors(ctx,results.poseLandmarks,POSE_CONNECTIONS,thin)
-}
-
-if(results.leftHandLandmarks){
-let left = smooth(results.leftHandLandmarks, prevLeft)
-prevLeft = left
-drawConnectors(ctx,left,HAND_CONNECTIONS,line)
-drawLandmarks(ctx,left,{color:"#00FF00",radius:2})
-}else prevLeft=null
-
-if(results.rightHandLandmarks){
-let right = smooth(results.rightHandLandmarks, prevRight)
-prevRight = right
-drawConnectors(ctx,right,HAND_CONNECTIONS,line)
-drawLandmarks(ctx,right,{color:"#00FF00",radius:2})
-}else prevRight=null
-
-if(results.faceLandmarks){
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_FACE_OVAL,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_LEFT_EYE,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_RIGHT_EYE,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_LEFT_EYEBROW,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_RIGHT_EYEBROW,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_LIPS,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_LEFT_IRIS,thin)
-drawConnectors(ctx,results.faceLandmarks,FACEMESH_RIGHT_IRIS,thin)
-}
-
-let kp=extract(results)
+let kp=extract(r)
 sequence.push(kp)
 if(sequence.length>30) sequence.shift()
 
 let now=Date.now()
 
-/* 🔥 UPDATED GAP → 2200ms */
+/* 🔥 CONTROL REQUEST RATE */
 if(sequence.length>=25 && now-lastTime>2200){
 
 const res=await fetch("/predict",{
@@ -360,28 +174,23 @@ language:selectedLanguage
 
 const data=await res.json()
 
-if(data.english){
+if(data.english && data.english!==lastPrediction){
 
-if(data.english === lastPrediction) return
-
-lastPrediction = data.english
-lastTime = now
+lastPrediction=data.english
+lastTime=now
 
 document.getElementById("prediction").innerText=data.english
 document.getElementById("translation").innerText=data.result
 
 speak(data.english)
-
 }
-
 }
-
 })
 
 const camera=new Camera(video,{
 onFrame:async()=>{await holistic.send({image:video})},
-width:640,
-height:480
+width:320,
+height:240
 })
 
 camera.start()
