@@ -7,8 +7,8 @@ import time
 
 app = Flask(__name__)
 
-# Load model
-model = tf.keras.models.load_model("saved/final_model.keras")
+# 🔥 Load model lazily (IMPORTANT FIX)
+model = None
 
 # Translator
 translator = Translator()
@@ -28,7 +28,12 @@ def home():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    global model
     global last_time
+
+    # 🔥 Load model only when needed
+    if model is None:
+        model = tf.keras.models.load_model("saved/final_model.keras")
 
     data = request.json
 
@@ -45,7 +50,7 @@ def predict():
 
     preds = model.predict(keypoints, verbose=0)[0]
 
-    # Pick from top 3 predictions (stable + slight variation)
+    # Pick from top 3 predictions
     top3 = np.argsort(preds)[-3:]
     class_id = int(np.random.choice(top3))
 
@@ -71,5 +76,5 @@ def predict():
 
 
 # ❗ IMPORTANT:
-# DO NOT add app.run()
-# gunicorn will handle the server automatically
+# Do NOT add app.run()
+# gunicorn will handle the server
